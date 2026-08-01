@@ -32,13 +32,14 @@ jobs:
         with:
           workspaces: desktop
 
-      # wry needs the system webview headers on Linux. macOS and Windows use
-      # WKWebView and WebView2, both already present on the runners.
+      # wry needs the system webview headers on Linux, and muda links against
+      # libxdo for X11 accelerator handling. macOS and Windows use WKWebView
+      # and WebView2, both already present on the runners.
       - name: Install Linux webview dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev
 
       - run: npm ci
 

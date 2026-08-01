@@ -40,8 +40,8 @@ Rust core on the system webview, Tiptap for editing, no UI framework.
 
 ## Build
 
-Requires Rust and Node. On Linux also `libwebkit2gtk-4.1-dev` and `libgtk-3-dev`;
-macOS and Windows use the webview that ships with the OS.
+Requires Rust and Node. On Linux also `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`
+and `libxdo-dev`; macOS and Windows use the webview that ships with the OS.
 
 ```sh
 npm install
