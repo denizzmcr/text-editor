@@ -15,13 +15,17 @@ Every download below is **under 2 MB** — the build fails if any artifact excee
 ## Installing
 
 **macOS** — unzip and drag `Text Editor.app` to Applications. The app is not
-code-signed, so the first launch is blocked: open it once, then go to
-**System Settings → Privacy & Security** and click **Open Anyway**. Or clear the
-quarantine flag directly:
+notarized, so the first launch is blocked with *"Apple could not verify…"*: click
+**Done**, then go to **System Settings → Privacy & Security**, where an **Open
+Anyway** button now appears. Or skip the round trip entirely:
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/Text Editor.app"
 ```
+
+If you instead see *"Text Editor is damaged and can't be opened"*, you have the
+v1.0.0 download — its bundle signature was malformed. Delete it and use v1.0.1
+or later.
 
 **Windows** — unzip and run `text-editor.exe`. SmartScreen will warn that the
 publisher is unrecognised (again, no code signature): **More info → Run anyway**.

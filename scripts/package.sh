@@ -29,6 +29,17 @@ case "$(uname -s)" in
     cp "$BIN" "$APP/Contents/MacOS/text-editor"
     cp desktop/Info.plist "$APP/Contents/Info.plist"
     cp desktop/icons/icon.icns "$APP/Contents/Resources/icon.icns"
+
+    # Ad-hoc sign the assembled bundle. Rust's linker already ad-hoc signs the
+    # executable, so without this macOS sees a bundle whose binary claims to be
+    # signed but which has no _CodeSignature/CodeResources -- an inconsistent
+    # signature. Gatekeeper reports that as "the app is damaged" and refuses to
+    # open it, with no "Open Anyway" escape. Only shows up once the app has been
+    # downloaded, since macOS skips the check for files without a quarantine
+    # flag. `--sign -` is ad-hoc: no certificate, no Apple account.
+    codesign --force --sign - --timestamp=none "$APP"
+    codesign --verify --strict "$APP"
+
     ARTIFACT="$APP"
     ;;
 

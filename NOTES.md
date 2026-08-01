@@ -80,10 +80,27 @@ format its platform expects (`scripts/archive.sh`), and publishes them as a
 GitHub Release with a `SHA256SUMS` file. It calls the same `package.sh`, so a
 release cannot be cut over the 2 MB budget.
 
-The builds are unsigned. Code signing needs a paid Apple Developer account on
-macOS and a certificate on Windows; without them the first launch takes an extra
-click through Gatekeeper or SmartScreen, which the release notes explain. Signing
+The builds carry no developer certificate, so the first launch takes an extra
+click through Gatekeeper or SmartScreen. Notarizing (macOS) or signing (Windows)
 is the only thing that removes that step — it is not a packaging mistake.
+
+The macOS bundle is nevertheless **ad-hoc signed** by `package.sh`, and that part
+is not optional. Rust's linker ad-hoc signs the executable, so a bundle built by
+copying that executable into a `.app` has a main binary claiming to be signed but
+no `Contents/_CodeSignature/CodeResources`. macOS reads that inconsistency as
+*"the application is damaged"* and refuses to open it, with no *Open Anyway*
+escape — a much worse failure than the unnotarized warning.
+
+It is easy to miss: macOS only verifies signatures on files carrying a quarantine
+flag, so a locally built or `cp`-installed app runs fine and only the downloaded
+copy breaks. `codesign --force --sign -` on the assembled bundle fixes it, needs
+no certificate, and costs ~20 KB. Verify a change to packaging with:
+
+```sh
+codesign --verify --strict "dist-app/Text Editor.app"
+xattr -w com.apple.quarantine "0083;0;Safari;" "$COPY"   # simulate a download
+syspolicy_check distribution "$COPY"                     # should list only the notary ticket
+```
 
 ## The bridge to Rust
 
