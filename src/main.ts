@@ -1,7 +1,14 @@
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { confirm, message, open, save } from "@tauri-apps/plugin-dialog";
 import { Editor } from "@tiptap/core";
+
+import {
+  closeWindow,
+  confirmDialog as confirm,
+  listen,
+  messageDialog as message,
+  openDialog,
+  saveDialog,
+  setTitle,
+} from "./bridge";
 
 import { extensions } from "./editor/extensions";
 import {
@@ -32,8 +39,6 @@ const FORMAT_LABELS: Record<DocumentFormat, string> = {
   markdown: "Markdown",
   text: "Plain text",
 };
-
-const appWindow = getCurrentWindow();
 
 let currentPath: string | null = null;
 let currentFormat: DocumentFormat = "html";
@@ -114,7 +119,7 @@ async function persist(): Promise<boolean> {
 async function saveAs(): Promise<void> {
   // No filter list: the file type is whatever the user names it, and the
   // extension chooses how the contents are written.
-  const path = await save({
+  const path = await saveDialog({
     title: "Save",
     defaultPath: currentPath ?? "Untitled.html",
   });
@@ -126,7 +131,7 @@ async function saveAs(): Promise<void> {
   // Say so before writing rather than after.
   if (isLossy(format) && hasFormatting()) {
     const proceed = await confirm(
-      `${path.split("/").pop()} will be saved as plain text, so bold, headings and images will not be stored in it. Continue?`,
+      `${baseName(path)} will be saved as plain text, so bold, headings and images will not be stored in it. Continue?`,
       { title: "Save as plain text", kind: "warning" },
     );
     if (!proceed) return;
@@ -161,7 +166,7 @@ function hasFormatting(): boolean {
 // --- Opening --------------------------------------------------------------
 
 async function openDocument(): Promise<void> {
-  const selected = await open({ title: "Open", multiple: false, directory: false });
+  const selected = await openDialog({ title: "Open" });
   if (typeof selected !== "string") return;
   await openPath(selected);
 }
@@ -205,7 +210,7 @@ function loadContent(html: string): void {
 
 async function exportAs(kind: "md" | "txt"): Promise<void> {
   const base = currentPath ? stripExtension(baseName(currentPath)) : "Untitled";
-  const path = await save({
+  const path = await saveDialog({
     title: kind === "md" ? "Export as Markdown" : "Export as Plain Text",
     defaultPath: `${base}.${kind}`,
   });
@@ -219,17 +224,16 @@ async function exportAs(kind: "md" | "txt"): Promise<void> {
   }
 }
 
-const baseName = (path: string) => path.split("/").pop() ?? path;
+// Splits on both separators: Windows paths use backslashes.
+const baseName = (path: string) => path.split(/[/\\]/).pop() || path;
 const stripExtension = (name: string) => name.replace(/\.[^.]+$/, "");
 
 // --- Images ---------------------------------------------------------------
 
 async function insertImageFromDisk(): Promise<void> {
-  const selected = await open({
+  const selected = await openDialog({
     title: "Insert Image",
-    multiple: false,
-    directory: false,
-    filters: [{ name: "Images", extensions: IMAGE_EXTENSIONS }],
+    extensions: IMAGE_EXTENSIONS,
   });
   if (typeof selected !== "string") return;
 
@@ -280,7 +284,7 @@ function updateChrome(): void {
   docNameEl.textContent = name;
   formatEl.textContent = FORMAT_LABELS[currentFormat];
   formatEl.classList.toggle("is-lossy", isLossy(currentFormat));
-  void appWindow.setTitle(dirty ? `${name} •` : name);
+  void setTitle(dirty ? `${name} •` : name);
 }
 
 function setStatus(text: string): void {
@@ -346,29 +350,36 @@ const MENU_ACTIONS: Record<string, () => unknown> = {
   export_txt: () => exportAs("txt"),
 };
 
-void listen<string>("menu", ({ payload }) => {
-  void MENU_ACTIONS[payload]?.();
+listen<string>("menu", (id) => {
+  void MENU_ACTIONS[id]?.();
 });
 
 // --- Lifecycle ------------------------------------------------------------
 
-void appWindow.onCloseRequested(async (event) => {
-  if (!dirty) return;
-  event.preventDefault();
+// The shell asks before closing rather than closing outright, so unsaved work
+// can be flushed first.
+listen("close-requested", () => {
+  void (async () => {
+    if (!dirty) {
+      await closeWindow();
+      return;
+    }
 
-  // Only close once the work is safely on disk. If the write failed (read-only
-  // volume, deleted directory, full disk) closing anyway would discard exactly
-  // the edits the user was trying to keep, so make them choose explicitly.
-  if (await persist()) {
-    await appWindow.destroy();
-    return;
-  }
+    // Only close once the work is safely on disk. If the write failed
+    // (read-only volume, deleted directory, full disk) closing anyway would
+    // discard exactly the edits the user was trying to keep, so make them
+    // choose explicitly.
+    if (await persist()) {
+      await closeWindow();
+      return;
+    }
 
-  const discard = await confirm(
-    "Could not save your changes. Close anyway and lose them?",
-    { title: "Text Editor", kind: "warning" },
-  );
-  if (discard) await appWindow.destroy();
+    const discard = await confirm(
+      "Could not save your changes. Close anyway and lose them?",
+      { title: "Text Editor", kind: "warning" },
+    );
+    if (discard) await closeWindow();
+  })();
 });
 
 /** Loads a file the OS handed us. No-op when there isn't one. */
@@ -384,7 +395,7 @@ async function openPendingFile(): Promise<boolean> {
 }
 
 // Fires when Finder hands a file to an already-running instance.
-void listen("open-pending", () => {
+listen("open-pending", () => {
   void openPendingFile();
 });
 

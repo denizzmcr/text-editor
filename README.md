@@ -1,9 +1,11 @@
 # Text Editor
 
-A lightweight, offline-first rich text editor for macOS. Write, format, and save
-documents as whatever file type you like — no accounts, no cloud, no network.
+A lightweight, offline-first rich text editor for macOS, Windows and Linux.
+Write, format, and save documents as whatever file type you like — no accounts,
+no cloud, no network.
 
-Built with Tauri (Rust core) and Tiptap, with no UI framework.
+Rust core on the system webview, Tiptap for editing, no UI framework.
+**The packaged app is under 2 MB.**
 
 ## What it does
 
@@ -20,8 +22,9 @@ Built with Tauri (Rust core) and Tiptap, with no UI framework.
 - **Images** — insert from disk, paste, or drag and drop; embedded in the
   document so a saved file stays self-contained
 - **Export** — Markdown or plain text
-- **Opens from Finder** — right-click a text or source file → Open With → Text
-  Editor
+- **Opens from the file manager** — right-click a text or source file → Open
+  With → Text Editor, on all three platforms
+- **Under 2 MB packaged**, verified in CI on macOS, Windows and Linux
 
 ## Shortcuts
 
@@ -37,14 +40,18 @@ Built with Tauri (Rust core) and Tiptap, with no UI framework.
 
 ## Build
 
-Requires Rust and Node.
+Requires Rust and Node. On Linux also `libwebkit2gtk-4.1-dev` and `libgtk-3-dev`;
+macOS and Windows use the webview that ships with the OS.
 
 ```sh
 npm install
-npm run tauri dev        # run in development
-npm run tauri build      # build the release app
-npm run install-app      # install to /Applications and register with Finder
+npm run desktop:dev      # run it
+npm run package          # build the release artifact and check it fits the budget
+npm run install-app      # install and register for "Open With"
 ```
 
-The packaged app is 4.2 MB. See [NOTES.md](NOTES.md) for the size breakdown and
-other design notes.
+On Windows, register with
+`powershell -ExecutionPolicy Bypass -File scripts/register-windows.ps1`.
+
+Every push builds all three platforms in CI and **fails if any artifact exceeds
+2 MB**. See [NOTES.md](NOTES.md) for the size breakdown and other design notes.

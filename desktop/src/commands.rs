@@ -1,38 +1,14 @@
+//! File I/O, unchanged in behaviour from the Tauri build. These are plain
+//! `std::fs` functions; only the command plumbing around them differs.
+
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use base64::Engine;
-use tauri::Manager;
 
-/// A file macOS asked us to open, held until the webview collects it.
-///
-/// When the app is launched *by* opening a file, the system delivers the path
-/// before the frontend has finished loading, so an event emitted at that
-/// moment would land on nobody. Parking the path here instead lets the
-/// frontend take it whenever it becomes ready.
-#[derive(Default)]
-pub struct PendingOpen(Mutex<Option<String>>);
-
-impl PendingOpen {
-    pub fn set(&self, path: String) {
-        if let Ok(mut slot) = self.0.lock() {
-            *slot = Some(path);
-        }
-    }
-}
-
-/// Takes the pending path, if any. Taking is atomic, so the startup check and
-/// the event handler can both call it without opening the file twice.
-#[tauri::command]
-pub fn take_pending_file(state: tauri::State<'_, PendingOpen>) -> Option<String> {
-    state.0.lock().ok().and_then(|mut slot| slot.take())
-}
-
-#[tauri::command]
-pub fn read_file(path: String) -> Result<String, String> {
-    fs::read_to_string(&path).map_err(|e| format!("Could not open {path}: {e}"))
+pub fn read_file(path: &str) -> Result<String, String> {
+    fs::read_to_string(path).map_err(|e| format!("Could not open {path}: {e}"))
 }
 
 /// Writes atomically: the contents go to a temp file in the same directory,
@@ -42,9 +18,8 @@ pub fn read_file(path: String) -> Result<String, String> {
 /// truncate-and-write that is interrupted mid-flight would leave the user's
 /// document truncated on disk; a rename is atomic, so the file on disk is
 /// always either the previous version or the complete new one.
-#[tauri::command]
-pub fn write_file(path: String, contents: String) -> Result<(), String> {
-    let target = Path::new(&path);
+pub fn write_file(path: &str, contents: &str) -> Result<(), String> {
+    let target = Path::new(path);
     let dir = target
         .parent()
         .ok_or_else(|| format!("Invalid path: {path}"))?;
@@ -72,10 +47,9 @@ pub fn write_file(path: String, contents: String) -> Result<(), String> {
 /// Reads an image off disk and returns it as a `data:` URI so it can be
 /// embedded directly in the document, keeping saved files self-contained
 /// with no sidecar assets.
-#[tauri::command]
-pub fn read_image_data_uri(path: String) -> Result<String, String> {
-    let bytes = fs::read(&path).map_err(|e| format!("Could not read image {path}: {e}"))?;
-    let mime = mime_for(&path);
+pub fn read_image_data_uri(path: &str) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|e| format!("Could not read image {path}: {e}"))?;
+    let mime = mime_for(path);
     let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
     Ok(format!("data:{mime};base64,{encoded}"))
 }
@@ -102,20 +76,40 @@ fn mime_for(path: &str) -> &'static str {
 //
 // A document that has never been saved has nowhere to auto-save to. Rather
 // than leave that work unprotected, it is mirrored to a draft file in the
-// app data dir and restored on next launch.
+// per-user data dir and restored on next launch.
 
-fn draft_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("No app data directory: {e}"))?;
+/// Per-user data directory, resolved without a framework.
+fn app_data_dir() -> Result<PathBuf, String> {
+    let base = if cfg!(target_os = "windows") {
+        std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .ok_or_else(|| "APPDATA is not set".to_string())?
+    } else if cfg!(target_os = "macos") {
+        home_dir()?.join("Library").join("Application Support")
+    } else {
+        match std::env::var_os("XDG_DATA_HOME") {
+            Some(dir) => PathBuf::from(dir),
+            None => home_dir()?.join(".local").join("share"),
+        }
+    };
+
+    Ok(base.join("com.deniz.texteditor"))
+}
+
+fn home_dir() -> Result<PathBuf, String> {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME is not set".to_string())
+}
+
+fn draft_file() -> Result<PathBuf, String> {
+    let dir = app_data_dir()?;
     fs::create_dir_all(&dir).map_err(|e| format!("Could not create {}: {e}", dir.display()))?;
     Ok(dir.join("draft.html"))
 }
 
-#[tauri::command]
-pub fn read_draft(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    let path = draft_file(&app)?;
+pub fn read_draft() -> Result<Option<String>, String> {
+    let path = draft_file()?;
     match fs::read_to_string(&path) {
         Ok(contents) => Ok(Some(contents)),
         // A missing draft is the normal case, not an error.
@@ -124,15 +118,13 @@ pub fn read_draft(app: tauri::AppHandle) -> Result<Option<String>, String> {
     }
 }
 
-#[tauri::command]
-pub fn write_draft(app: tauri::AppHandle, contents: String) -> Result<(), String> {
-    let path = draft_file(&app)?;
-    write_file(path.to_string_lossy().into_owned(), contents)
+pub fn write_draft(contents: &str) -> Result<(), String> {
+    let path = draft_file()?;
+    write_file(&path.to_string_lossy(), contents)
 }
 
-#[tauri::command]
-pub fn clear_draft(app: tauri::AppHandle) -> Result<(), String> {
-    let path = draft_file(&app)?;
+pub fn clear_draft() -> Result<(), String> {
+    let path = draft_file()?;
     match fs::remove_file(&path) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -160,9 +152,9 @@ mod tests {
         let file = temp_dir("round-trip").join("doc.html");
         let body = "<h1>Title</h1><p>Body with <strong>bold</strong>.</p>";
 
-        write_file(path_string(&file), body.to_string()).unwrap();
+        write_file(&path_string(&file), body).unwrap();
 
-        assert_eq!(read_file(path_string(&file)).unwrap(), body);
+        assert_eq!(read_file(&path_string(&file)).unwrap(), body);
     }
 
     #[test]
@@ -170,10 +162,10 @@ mod tests {
         let dir = temp_dir("overwrite");
         let file = dir.join("doc.html");
 
-        write_file(path_string(&file), "first".into()).unwrap();
-        write_file(path_string(&file), "second".into()).unwrap();
+        write_file(&path_string(&file), "first").unwrap();
+        write_file(&path_string(&file), "second").unwrap();
 
-        assert_eq!(read_file(path_string(&file)).unwrap(), "second");
+        assert_eq!(read_file(&path_string(&file)).unwrap(), "second");
 
         // The rename must consume the temp file; a leftover would show up in
         // the user's folder next to their document.
@@ -193,16 +185,16 @@ mod tests {
         // remainder of the old document behind.
         let file = temp_dir("shrink").join("doc.html");
 
-        write_file(path_string(&file), "a".repeat(5000)).unwrap();
-        write_file(path_string(&file), "short".into()).unwrap();
+        write_file(&path_string(&file), &"a".repeat(5000)).unwrap();
+        write_file(&path_string(&file), "short").unwrap();
 
-        assert_eq!(read_file(path_string(&file)).unwrap(), "short");
+        assert_eq!(read_file(&path_string(&file)).unwrap(), "short");
     }
 
     #[test]
     fn reports_an_error_for_an_unwritable_directory() {
         let missing = std::env::temp_dir().join("text-editor-does-not-exist/doc.html");
-        assert!(write_file(path_string(&missing), "x".into()).is_err());
+        assert!(write_file(&path_string(&missing), "x").is_err());
     }
 
     #[test]
@@ -212,5 +204,13 @@ mod tests {
         assert_eq!(mime_for("/tmp/a.jpeg"), "image/jpeg");
         assert_eq!(mime_for("/tmp/a.svg"), "image/svg+xml");
         assert_eq!(mime_for("/tmp/a.unknown"), "application/octet-stream");
+    }
+
+    #[test]
+    fn app_data_dir_is_absolute_and_namespaced() {
+        // Guards the hand-rolled replacement for Tauri's path resolver.
+        let dir = app_data_dir().unwrap();
+        assert!(dir.is_absolute(), "{dir:?}");
+        assert!(dir.ends_with("com.deniz.texteditor"), "{dir:?}");
     }
 }

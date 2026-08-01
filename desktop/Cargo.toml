@@ -1,0 +1,37 @@
+[package]
+name = "text-editor"
+version = "0.1.0"
+description = "A lightweight offline-first rich text editor"
+authors = ["Deniz"]
+edition = "2021"
+
+[[bin]]
+name = "text-editor"
+path = "src/main.rs"
+
+[dependencies]
+# The window and the system webview. These are the libraries Tauri itself is
+# built on; using them directly costs ~0.87MB against Tauri's ~3.5MB floor,
+# which is what makes the <2MB target reachable at all.
+wry = "0.55"
+tao = "0.35"
+muda = "0.19"
+rfd = "0.16"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Used only to embed inserted images as data URIs. Hand-rolling base64 bit
+# twiddling is a needless correctness risk for ~15KB.
+base64 = "0.22"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.52"
+
+# Every setting here serves the <2MB budget. opt-level "s" vs "z" is worth
+# re-testing whenever dependencies change -- neither reliably wins.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+incremental = false

@@ -25,3 +25,6 @@ dist-ssr
 
 # Local planning notes, not part of the project
 plan.md
+
+# Packaged artifacts
+dist-app

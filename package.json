@@ -6,14 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
-    "install-app": "bash scripts/install-app.sh",
-    "tauri": "tauri"
+    "desktop:dev": "npm run build && cargo run --manifest-path desktop/Cargo.toml",
+    "desktop:build": "npm run build && cargo build --release --manifest-path desktop/Cargo.toml",
+    "package": "bash scripts/package.sh",
+    "install-app": "bash scripts/install-app.sh"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-dialog": "^2.7.2",
     "@tiptap/core": "^3.29.2",
     "@tiptap/extension-bold": "^3.29.2",
     "@tiptap/extension-document": "^3.29.2",
@@ -27,7 +26,6 @@
     "@tiptap/pm": "^3.29.2"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   },

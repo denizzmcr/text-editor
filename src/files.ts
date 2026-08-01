@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./bridge";
 
 export const readFile = (path: string) => invoke<string>("read_file", { path });
 
