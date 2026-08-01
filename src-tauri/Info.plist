@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged into the generated Info.plist by the Tauri bundler.
+
+  Declaring document types is what makes the app appear in Finder's "Open
+  With" menu. Content types are used rather than a list of extensions so that
+  any text-like file qualifies, instead of only the handful we thought to
+  enumerate.
+
+  LSHandlerRank is Alternate on purpose: the app offers itself as a choice but
+  does not take over as the default handler for, say, every .py file on the
+  system.
+-->
+<plist version="1.0">
+  <dict>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeName</key>
+        <string>Text Document</string>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>LSHandlerRank</key>
+        <string>Alternate</string>
+        <key>LSItemContentTypes</key>
+        <array>
+          <string>public.text</string>
+          <string>public.plain-text</string>
+          <string>public.utf8-plain-text</string>
+          <string>public.source-code</string>
+          <string>public.script</string>
+          <string>public.shell-script</string>
+          <string>public.xml</string>
+          <string>public.json</string>
+          <string>public.html</string>
+          <string>net.daringfireball.markdown</string>
+        </array>
+      </dict>
+
+      <!--
+        The types declared below in UTImportedTypeDeclarations. They conform
+        to public.plain-text, but are listed explicitly so the binding does
+        not depend on conformance resolution alone.
+      -->
+      <dict>
+        <key>CFBundleTypeName</key>
+        <string>Source File</string>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>LSHandlerRank</key>
+        <string>Alternate</string>
+        <key>LSItemContentTypes</key>
+        <array>
+          <string>net.daringfireball.markdown</string>
+          <string>com.deniz.texteditor.source</string>
+        </array>
+      </dict>
+    </array>
+
+    <!--
+      macOS only offers an app in "Open With" for file types it has a real UTI
+      for. Extensions nothing on the system declares (.md and .rs among them)
+      fall back to a *dynamic* UTI that conforms to nothing, so no app is
+      offered for them at all -- not even TextEdit. A CFBundleTypeExtensions
+      wildcard does not change that.
+
+      Importing the types is what fixes it: these extensions gain a real UTI
+      conforming to public.plain-text, which the bindings above then match.
+      Extensions that already have a system UTI (.py, .json, .yaml, .ts, .c
+      and friends) are deliberately absent -- they work already, and
+      redeclaring them would only risk conflicting with the system.
+    -->
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+      <dict>
+        <key>UTTypeIdentifier</key>
+        <string>net.daringfireball.markdown</string>
+        <key>UTTypeDescription</key>
+        <string>Markdown Document</string>
+        <key>UTTypeConformsTo</key>
+        <array>
+          <string>public.plain-text</string>
+        </array>
+        <key>UTTypeTagSpecification</key>
+        <dict>
+          <key>public.filename-extension</key>
+          <array>
+            <string>md</string>
+            <string>markdown</string>
+            <string>mdown</string>
+            <string>mkd</string>
+          </array>
+        </dict>
+      </dict>
+
+      <dict>
+        <key>UTTypeIdentifier</key>
+        <string>com.deniz.texteditor.source</string>
+        <key>UTTypeDescription</key>
+        <string>Source File</string>
+        <key>UTTypeConformsTo</key>
+        <array>
+          <string>public.plain-text</string>
+          <string>public.source-code</string>
+        </array>
+        <key>UTTypeTagSpecification</key>
+        <dict>
+          <key>public.filename-extension</key>
+          <array>
+            <string>rs</string>
+            <string>toml</string>
+            <string>zig</string>
+            <string>go</string>
+            <string>kt</string>
+            <string>kts</string>
+            <string>lua</string>
+            <string>jl</string>
+            <string>nim</string>
+            <string>hcl</string>
+            <string>tf</string>
+            <string>vue</string>
+            <string>svelte</string>
+            <string>ex</string>
+            <string>exs</string>
+            <string>erl</string>
+            <string>hs</string>
+            <string>dart</string>
+            <string>gradle</string>
+            <string>proto</string>
+            <string>env</string>
+            <string>lock</string>
+            <string>cfg</string>
+            <string>conf</string>
+            <string>ini</string>
+            <string>tsx</string>
+            <string>jsx</string>
+            <string>cjs</string>
+            <string>sql</string>
+            <string>tex</string>
+            <string>bib</string>
+            <string>org</string>
+            <string>rst</string>
+            <string>adoc</string>
+          </array>
+        </dict>
+      </dict>
+    </array>
+  </dict>
+</plist>

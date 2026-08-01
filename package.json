@@ -1,0 +1,38 @@
+{
+  "name": "text-editor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "node scripts/run-tests.mjs",
+    "install-app": "bash scripts/install-app.sh",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tiptap/core": "^3.29.2",
+    "@tiptap/extension-bold": "^3.29.2",
+    "@tiptap/extension-document": "^3.29.2",
+    "@tiptap/extension-hard-break": "^3.29.2",
+    "@tiptap/extension-heading": "^3.29.2",
+    "@tiptap/extension-image": "^3.29.2",
+    "@tiptap/extension-italic": "^3.29.2",
+    "@tiptap/extension-paragraph": "^3.29.2",
+    "@tiptap/extension-text": "^3.29.2",
+    "@tiptap/extensions": "^3.29.2",
+    "@tiptap/pm": "^3.29.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "fsevents@2.3.3": true
+  }
+}

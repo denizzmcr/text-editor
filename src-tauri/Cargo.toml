@@ -1,0 +1,35 @@
+[package]
+name = "text-editor"
+version = "0.1.0"
+description = "A lightweight offline-first rich text editor"
+authors = ["Deniz"]
+edition = "2021"
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name (needed on Windows).
+name = "text_editor_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+# Native open/save panels. The only realistic way to get a real macOS file
+# picker; the alternative is hand-binding NSOpenPanel/NSSavePanel.
+tauri-plugin-dialog = "2"
+# Used only to embed inserted images as data URIs. Hand-rolling base64 bit
+# twiddling is a needless correctness risk for ~15KB.
+base64 = "0.22"
+
+# Size-optimized release profile. Every setting here is in service of the
+# <2MB bundle target; see CLAUDE.md. opt-level "s" vs "z" is worth re-testing
+# whenever dependencies change -- neither reliably wins.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+incremental = false
