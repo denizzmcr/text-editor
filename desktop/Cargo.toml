@@ -16,7 +16,10 @@ path = "src/main.rs"
 wry = "0.55"
 tao = "0.35"
 muda = "0.19"
-rfd = "0.16"
+# default-features would pull in the xdg-portal backend on Linux, and with it
+# ashpd, zbus and a whole async runtime -- about half a megabyte of code for
+# dialogs. See the linux target section below for the replacement.
+rfd = { version = "0.16", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Used only to embed inserted images as data URIs. Hand-rolling base64 bit
@@ -26,10 +29,16 @@ base64 = "0.22"
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.52"
 
+# GTK3 dialogs rather than the desktop portal: tao and wry already link GTK3
+# on Linux, so this backend is close to free, where the portal backend brings
+# its own async stack.
+[target.'cfg(target_os = "linux")'.dependencies]
+rfd = { version = "0.16", default-features = false, features = ["gtk3"] }
+
 # Every setting here serves the <2MB budget. opt-level "s" vs "z" is worth
 # re-testing whenever dependencies change -- neither reliably wins.
 [profile.release]
-opt-level = "s"
+opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
