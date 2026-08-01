@@ -5,7 +5,8 @@ Write, format, and save documents as whatever file type you like — no accounts
 no cloud, no network.
 
 Rust core on the system webview, Tiptap for editing, no UI framework.
-**The packaged app is under 2 MB.**
+**The packaged app is under 2 MB on every platform** — 0.89 MB on Windows,
+1.16 MB on Linux, 1.30 MB on macOS.
 
 ## What it does
 

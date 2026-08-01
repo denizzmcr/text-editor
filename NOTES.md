@@ -3,7 +3,17 @@
 Background on decisions that aren't obvious from the code. Not needed to use
 the app — see [README.md](README.md) for that.
 
-## Bundle size: 1.38 MB
+## Bundle size: under 2 MB on all three platforms
+
+| Platform | Artifact | Size |
+|---|---|---|
+| Windows | `text-editor.exe` | 0.89 MB |
+| Linux | `text-editor` | 1.16 MB |
+| macOS | `Text Editor.app` | 1.30 MB |
+
+Each measured on that platform's own CI runner. The build fails if any artifact
+exceeds 2 MB.
+
 
 The brief targeted a packaged app under 2 MB. The first version of this editor
 was built on Tauri and came out at **4.2 MB** — comfortably over.
@@ -33,15 +43,24 @@ Measuring the layers Tauri is built on, without Tauri:
 Tauri's framework layer was costing ~2.75 MB. So the shell was rebuilt directly
 on `wry`/`tao`/`muda`/`rfd`, keeping the entire frontend unchanged. The result:
 
-| Component | Size |
-|---|---|
-| Binary, including the embedded frontend | 1.28 MB |
-| Icon | 0.09 MB |
-| Info.plist | negligible |
-| **Total `.app`** | **1.38 MB** |
-
 A native AppKit rewrite would have been smaller still, but it is macOS-only —
 ruled out by the cross-platform requirement.
+
+### What CI caught that local measurement could not
+
+The first run that got far enough to package showed macOS and Windows under
+budget but **Linux at 2.47 MB**. The cause: `rfd`'s default features select the
+xdg-portal backend, which drags in `ashpd`, `zbus` and an async runtime purely
+to show file dialogs. Switching to its `gtk3` backend costs almost nothing,
+because tao and wry already link GTK3 on Linux. That alone took Linux from
+2.47 MB to 1.16 MB.
+
+Re-testing `opt-level` at the same time flipped the answer: `"z"` now beats
+`"s"` by 6%, where `"s"` had won earlier. Worth repeating whenever the
+dependency graph changes — neither reliably wins.
+
+None of this was visible from a macOS machine, which is the argument for the
+CI gate rather than a number measured once locally.
 
 The dependency tree is kept deliberately lean for the same reason: no UI
 framework (React alone would be ~140 KB, a third of the JS budget), Tiptap
