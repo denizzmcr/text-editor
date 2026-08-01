@@ -58,11 +58,13 @@ esac
 
 # du -k reports allocated blocks, which overstates small files; sum the actual
 # bytes so the number matches what the budget is measured against.
+#
+# `wc -c` is used rather than `stat` because stat's flags differ between BSD
+# (-f%z) and GNU (-c%s), and this script has to run on all three platforms.
 if [ -d "$ARTIFACT" ]; then
-  BYTES=$(find "$ARTIFACT" -type f -exec stat -f%z {} + 2>/dev/null | awk '{s+=$1} END {print s}' \
-       || find "$ARTIFACT" -type f -exec stat -c%s {} + | awk '{s+=$1} END {print s}')
+  BYTES=$(find "$ARTIFACT" -type f -exec wc -c {} + | awk '$2 != "total" {s+=$1} END {print s+0}')
 else
-  BYTES=$(stat -f%z "$ARTIFACT" 2>/dev/null || stat -c%s "$ARTIFACT")
+  BYTES=$(wc -c < "$ARTIFACT" | tr -d '[:space:]')
 fi
 
 printf '\n%s\n' "$ARTIFACT"

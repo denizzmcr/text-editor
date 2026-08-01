@@ -6,10 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  # The whole point of the exercise. Enforced per platform below.
-  BUDGET_BYTES: 2097152
-
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -18,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, name: macOS, artifact: dist-app }
-          - { os: ubuntu-latest, name: Linux, artifact: dist-app }
-          - { os: windows-latest, name: Windows, artifact: dist-app }
+          - { os: macos-latest, name: macOS }
+          - { os: ubuntu-latest, name: Linux }
+          - { os: windows-latest, name: Windows }
 
     steps:
       - uses: actions/checkout@v4
@@ -46,47 +42,23 @@ jobs:
 
       - run: npm ci
 
+      # Must come before the Rust steps: the binary embeds the built frontend
+      # with include_bytes!, so dist/ has to exist before rustc runs.
+      - name: Build frontend
+        run: npm run build
+
       - name: Frontend tests
         run: npm test
 
       - name: Rust tests
         run: cargo test --manifest-path desktop/Cargo.toml
 
-      - name: Build frontend
-        run: npm run build
-
-      - name: Build release binary
-        run: cargo build --release --manifest-path desktop/Cargo.toml
-
-      # Bash is available on all three runners, so one script covers the matrix.
-      - name: Package
+      # Builds the release binary, assembles the platform artifact, prints its
+      # size, and exits non-zero if it exceeds the 2MB budget. Bash is present
+      # on all three runners, so one script covers the matrix.
+      - name: Package and enforce size budget
         shell: bash
         run: bash scripts/package.sh
-
-      - name: Enforce size budget
-        shell: bash
-        run: |
-          if [ -d "dist-app/Text Editor.app" ]; then
-            target="dist-app/Text Editor.app"
-          elif [ -f "dist-app/text-editor.exe" ]; then
-            target="dist-app/text-editor.exe"
-          else
-            target="dist-app/text-editor"
-          fi
-
-          bytes=$(find "$target" -type f -printf '%s\n' 2>/dev/null | awk '{s+=$1} END {print s}') \
-            || bytes=$(find "$target" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
-
-          printf '%s: %s bytes (%.2f MB), budget %.2f MB\n' \
-            "$target" "$bytes" \
-            "$(awk -v b="$bytes" 'BEGIN{print b/1048576}')" \
-            "$(awk -v b="$BUDGET_BYTES" 'BEGIN{print b/1048576}')"
-
-          if [ "$bytes" -gt "$BUDGET_BYTES" ]; then
-            echo "::error::${{ matrix.name }} artifact is over the 2MB budget"
-            exit 1
-          fi
-          echo "${{ matrix.name }} is under budget."
 
       - uses: actions/upload-artifact@v4
         with:
