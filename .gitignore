@@ -29,3 +29,6 @@ plan.md
 # Packaged artifacts
 dist-app
 release
+
+# Assignment brief -- local only, not published
+CLAUDE.md
