@@ -8,6 +8,17 @@ Rust core on the system webview, Tiptap for editing, no UI framework.
 **The packaged app is under 2 MB on every platform** — 0.89 MB on Windows,
 1.16 MB on Linux, 1.30 MB on macOS.
 
+## Download
+
+Grab the latest build for your platform from the
+[**Releases page**](https://github.com/denizzmcr/text-editor/releases/latest) —
+macOS, Windows and Linux.
+
+The app isn't code-signed, so the first launch needs one extra click: on macOS,
+**System Settings → Privacy & Security → Open Anyway**; on Windows, SmartScreen's
+**More info → Run anyway**. Linux needs `libwebkit2gtk-4.1-0` installed. Full
+per-platform steps are in the release notes.
+
 ## What it does
 
 - **Rich text** — bold, italic, and Title / Heading / Subheading / Body styles

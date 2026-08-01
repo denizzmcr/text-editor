@@ -1,7 +1,7 @@
 {
   "name": "text-editor",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "desktop:dev": "npm run build && cargo run --manifest-path desktop/Cargo.toml",
     "desktop:build": "npm run build && cargo build --release --manifest-path desktop/Cargo.toml",
     "package": "bash scripts/package.sh",
+    "archive": "bash scripts/archive.sh",
     "install-app": "bash scripts/install-app.sh"
   },
   "dependencies": {

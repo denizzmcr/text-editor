@@ -71,6 +71,20 @@ CI enforces the budget on macOS, Windows and Linux, failing the build if any
 artifact exceeds 2 MB — the number is verified per platform rather than
 estimated from one machine.
 
+## Releases
+
+`build.yml` runs on every push, but its output is an *Actions artifact*: it needs
+a GitHub login to download and expires after 90 days. `release.yml` runs on a
+`v*` tag instead, builds the same three artifacts, wraps each in the archive
+format its platform expects (`scripts/archive.sh`), and publishes them as a
+GitHub Release with a `SHA256SUMS` file. It calls the same `package.sh`, so a
+release cannot be cut over the 2 MB budget.
+
+The builds are unsigned. Code signing needs a paid Apple Developer account on
+macOS and a certificate on Windows; without them the first launch takes an extra
+click through Gatekeeper or SmartScreen, which the release notes explain. Signing
+is the only thing that removes that step — it is not a packaging mistake.
+
 ## The bridge to Rust
 
 wry's IPC is one-way (page → host), so request/response is built in
